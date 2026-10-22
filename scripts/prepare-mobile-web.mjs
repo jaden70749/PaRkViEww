@@ -77,7 +77,7 @@ const cameraRelay = JSON.parse(await readFile(resolve(root, "deploy/camera-relay
 const sameOriginApi = Boolean(process.env.VERCEL);
 const config = {
   edgeApiBaseUrl: sameOriginApi ? "" : envValue("PARKVIEW_EDGE_API_BASE_URL") || cameraRelay.url,
-  cameraApiBaseUrl: sameOriginApi ? "" : envValue("PARKVIEW_CAMERA_API_BASE_URL") || cameraRelay.url,
+  cameraApiBaseUrl: sameOriginApi ? "" : envValue("PARKVIEW_CAMERA_API_BASE_URL"),
   kakaoJavaScriptKey: envValue("KAKAO_JAVASCRIPT_KEY")
 };
 await writeFile(

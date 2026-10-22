@@ -59,10 +59,20 @@ document.addEventListener("DOMContentLoaded", () => {
   els.adminToken.value = loadAdminToken();
   els.adminAuthDetails.open = !els.adminToken.value;
   document.querySelector("#trainingGroup").value = defaultTrainingGroup();
+  requireCameraApi();
   bindEvents();
   render();
   if (setupLotId && els.adminToken.value) loadRegions();
 });
+
+function requireCameraApi() {
+  if (cameraBase || !window.location.hostname.endsWith(".github.io")) return true;
+  const message = "GitHub Pages에는 CCTV 제어 서버가 없습니다. CCTV와 같은 네트워크에서 server.py를 실행하고, 그 서버의 HTTPS 터널 주소를 저장소 Actions Secret PARKVIEW_CAMERA_API_BASE_URL에 등록해 다시 배포하세요. Render AI API 주소는 CCTV 설정 API가 아닙니다.";
+  els.cameraConnectFeedback.textContent = message;
+  els.sourceStatus.textContent = message;
+  els.saveStatus.textContent = message;
+  return false;
+}
 
 function bindEvents() {
   document.querySelector("#referenceButton").addEventListener("click", saveEmptyReference);
@@ -143,6 +153,7 @@ function saveAdminToken(token) {
 
 async function connectCamera(event) {
   event.preventDefault();
+  if (!requireCameraApi()) return;
   const token = els.adminToken.value.trim();
   let url = els.cameraRtspUrl.value.trim();
   if (token.length < 20) {
@@ -179,7 +190,12 @@ async function connectCamera(event) {
     }
     const response = await fetch(endpoint, request);
     const result = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error("이 주소에는 CCTV 설정 API가 없습니다. Render API 대신 현장 server.py의 HTTPS 터널 주소를 설정하세요.");
+      }
+      throw new Error(result.error || `HTTP ${response.status}`);
+    }
     saveAdminToken(token);
     els.adminAuthDetails.open = false;
     els.cameraRtspUrl.value = "";
@@ -196,6 +212,7 @@ async function connectCamera(event) {
 }
 
 async function saveEmptyReference() {
+  if (!requireCameraApi()) return;
   if (!state.image || !state.slots.length || state.candidates || state.points.length ||
       state.savedSlots !== JSON.stringify(state.slots)) {
     els.saveStatus.textContent = "주차면 좌표를 먼저 저장한 뒤, 차량을 치운 사진을 불러와 주세요.";
@@ -233,6 +250,7 @@ function trainingStatus(message) {
 }
 
 async function saveTrainingSample() {
+  if (!requireCameraApi()) return;
   const button = document.querySelector("#trainingSampleButton");
   if (button.disabled) return;
   if (!state.image || !state.slots.length || state.candidates || state.points.length) {
@@ -276,6 +294,7 @@ function authHeaders(extra = {}) {
 }
 
 async function loadRegions() {
+  if (!requireCameraApi()) return;
   if (!els.adminToken.value.trim()) {
     els.saveStatus.textContent = "관리자 토큰을 입력하세요.";
     return;
@@ -310,6 +329,7 @@ async function loadRegions() {
 }
 
 async function loadCameraFrame() {
+  if (!requireCameraApi()) return;
   if (!els.adminToken.value.trim()) {
     els.sourceStatus.textContent = "관리자 토큰을 먼저 입력하세요.";
     return;
@@ -407,6 +427,7 @@ function moveCanvasPoint(event) {
 }
 
 async function detectRegions() {
+  if (!requireCameraApi()) return;
   if (els.detectButton.disabled) return;
   if (!state.roi && state.slots.length === 1 && state.slots[0].polygon.length === 4) {
     const polygon = state.slots[0].polygon;
@@ -517,6 +538,7 @@ function undoLast() {
 }
 
 async function saveRegions() {
+  if (!requireCameraApi()) return;
   if (!setupLotId) {
     els.saveStatus.textContent = "주차장 관리 화면의 CCTV 주차면 등록 버튼으로 열어 주세요.";
     return;

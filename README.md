@@ -37,9 +37,9 @@ pip install -r requirements.txt
 python3 server.py --host 0.0.0.0 --port 5180
 ```
 
-브라우저에서는 로컬 실행 주소 또는 배포된 ParkView 주소를 엽니다. 배포 사이트는 `PARKVIEW_CAMERA_API_BASE_URL`에 지정된 HTTPS 카메라 API로 연결되며, 관리자 화면에서 RTSP 링크와 관리자 토큰을 바로 입력할 수 있습니다. 단순 정적 서버를 직접 띄울 때는 `/api/public-config`와 AI 프록시가 없으므로 `server.py`로 실행해야 합니다.
+브라우저에서는 로컬 실행 주소 또는 배포된 ParkView 주소를 엽니다. 배포 사이트의 CCTV 관리 기능은 `PARKVIEW_CAMERA_API_BASE_URL`에 지정된 HTTPS 카메라 API로 연결됩니다. `render.yaml`의 Render 서비스는 AI 도면 생성과 프레임 중계 전용이며 `/api/camera/configure`, `/api/camera/settings` 같은 현장 CCTV 제어 API를 제공하지 않습니다. 따라서 이 값을 Render 주소로 설정하면 카메라 설정 요청이 `404`로 실패합니다.
 
-GitHub Pages에서 CCTV를 보려면 `server.py`를 실행한 PC 앞에 Cloudflare Tunnel 같은 공개 HTTPS 중계를 구성하고, 저장소 Actions Secret `PARKVIEW_CAMERA_API_BASE_URL`에 그 HTTPS 주소를 등록해야 합니다. RTSP 주소 자체는 Pages에 넣지 않습니다.
+GitHub Pages에서 CCTV를 설정하려면 CCTV와 같은 네트워크의 PC에서 `server.py`를 실행하고, 그 PC로 연결되는 Cloudflare Tunnel 같은 HTTPS 중계를 구성하세요. 중계 주소를 저장소의 **Settings > Secrets and variables > Actions**에 `PARKVIEW_CAMERA_API_BASE_URL` 이름으로 등록하고 Pages 워크플로를 다시 실행합니다. 이 값이 없으면 CCTV 설정 화면에 필요한 연결 안내가 표시됩니다. RTSP 주소는 GitHub Secret이나 저장소 파일에 넣지 말고 관리자 화면에서 연결 서버로 전송하세요.
 
 현재 Localtunnel 주소를 복구할 때는 CCTV와 같은 네트워크에 있는 Mac에서 두 터미널을 계속 실행합니다.
 
@@ -107,7 +107,8 @@ npm run cap:android
 1. 저장소의 `Settings > Secrets and variables > Actions`에
    `KAKAO_JAVASCRIPT_KEY`를 추가합니다.
 2. `Settings > Pages > Source`를 `GitHub Actions`로 변경합니다.
-3. `main`에 push하면 `.github/workflows/pages.yml`이 정적 앱을 배포합니다.
+3. 고정 CCTV 관리도 사용할 경우, `server.py`를 운영할 PC의 HTTPS 터널 주소를 `PARKVIEW_CAMERA_API_BASE_URL` Actions Secret으로 등록합니다. Render 주소는 이 값으로 사용하지 않습니다.
+4. `main`에 push하거나 Actions의 `Deploy ParkView to GitHub Pages`를 실행하면 정적 앱을 배포합니다.
 
 ### AI 도면 API 배포
 

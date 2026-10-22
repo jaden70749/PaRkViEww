@@ -1829,6 +1829,7 @@ function renderCameraShareSettings() {
 }
 
 async function loadCameraShareSettings() {
+  if (!CAMERA_API_BASE_URL && window.location.hostname.endsWith(".github.io")) return;
   const endpoint = cameraApiUrl("/api/camera/settings");
   const token = loadAdminToken();
   if (!endpoint || !token) return;

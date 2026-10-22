@@ -40,6 +40,7 @@ function harness({ slots = [], confirm = true, fail = false, cameraFrame = false
     saveStatus: {}, sourceStatus: {} };
   const context = vm.createContext({ state, els, setupLotId: "test-lot", AbortSignal, URL,
     window: { confirm: () => confirm, location: { href: "https://parkview.example/calibrate.html" } }, render() {}, regionsUrl: () => "/api/regions/detect",
+    requireCameraApi: () => true,
     authHeaders: (headers = {}) => headers,
     document: { createElement: () => ({ getContext: () => ({ drawImage() {} }), toBlob: fn => fn({}) }) },
     fetch: async (url, options) => { requests++; lastRequest = { url, options }; if (fail) throw new Error("offline");
@@ -100,6 +101,29 @@ test("hosted calibration uses the configured camera API without a local redirect
   assert.doesNotMatch(source, /window\.location\.replace/);
 });
 
+test("Pages requires a camera API instead of sending CCTV requests to the Render AI relay", async () => {
+  const buildScript = await readFile(new URL("../scripts/prepare-mobile-web.mjs", import.meta.url), "utf8");
+  const workflow = await readFile(new URL("../.github/workflows/pages.yml", import.meta.url), "utf8");
+  assert.match(buildScript, /cameraApiBaseUrl: sameOriginApi \? "" : envValue\("PARKVIEW_CAMERA_API_BASE_URL"\),/);
+  assert.doesNotMatch(buildScript, /cameraApiBaseUrl:.*cameraRelay\.url/);
+  assert.match(workflow, /PARKVIEW_CAMERA_API_BASE_URL: \$\{\{ secrets\.PARKVIEW_CAMERA_API_BASE_URL \}\}/);
+  assert.doesNotMatch(workflow, /PARKVIEW_CAMERA_API_BASE_URL:.*parkview-plan-api\.onrender\.com/);
+});
+
+test("Pages calibration explains when its camera API URL is missing", () => {
+  const configuration = source.slice(
+    source.indexOf("function requireCameraApi()"),
+    source.indexOf("function bindEvents()")
+  );
+  const window = { location: { hostname: "jaden70749.github.io" } };
+  const els = { cameraConnectFeedback: {}, sourceStatus: {}, saveStatus: {} };
+  const context = vm.createContext({ cameraBase: "", window, els });
+  vm.runInContext(configuration, context);
+  assert.equal(context.requireCameraApi(), false);
+  assert.match(els.cameraConnectFeedback.textContent, /PARKVIEW_CAMERA_API_BASE_URL/);
+  assert.match(els.sourceStatus.textContent, /Render AI API/);
+});
+
 test("CCTV connection lives in calibration and reuses the saved administrator token", async () => {
   const calibrationHtml = await readFile(new URL("../calibrate.html", import.meta.url), "utf8");
   const appHtml = await readFile(new URL("../index.html", import.meta.url), "utf8");
@@ -129,6 +153,7 @@ function trainingHarness({ group = "", error = "" } = {}) {
   const context = vm.createContext({
     state: { image: { naturalWidth: 100, naturalHeight: 100 }, slots: [{ id: "1F-001" }], points: [] },
     els: { adminToken: { value: "test-token" } }, setupLotId: "test-lot", cameraBase: "", AbortSignal,
+    requireCameraApi: () => true,
     currentFloorId: () => "1F", authHeaders: h => h,
     document: { querySelector: id => nodes[id], createElement: () => ({
       getContext: () => ({ drawImage() {} }), toDataURL: () => "data:image/jpeg;base64,abc"
